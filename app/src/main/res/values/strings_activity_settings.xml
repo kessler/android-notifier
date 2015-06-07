@@ -7,10 +7,15 @@
     <string name="pref_header_general">General</string>
 
     <string name="pref_title_notification_server">Notification Server</string>
-    <string name="pref_description_notification_server">URL of the notification server
-    </string>
+    <string name="pref_description_notification_server">URL of the notification server</string>
 
     <string name="pref_title_registration_handle">Registration Handle</string>
     <string name="pref_description_registration_handle">A unique registration handle</string>
+
+    <string name="pref_title_google_project_number">Google project number</string>
+    <string name="pref_description_google_project_number">From google dev console</string>
+
+    <string name="pref_title_encryption_psk">Encryption PSK</string>
+    <string name="pref_description_encryption_psk">An optional preshared key to decrypt messages</string>
 
 </resources>

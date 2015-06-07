@@ -21,6 +21,9 @@ public class MainActivity extends RoboActionBarActivity implements OnRegister {
     @InjectResource(R.string.missing_google_play)
     private String missingGooglePlayMessage;
 
+    @InjectResource(R.string.missing_google_project_number)
+    private String missingGoogleProjectNumber;
+
     @InjectResource(R.string.not_registered)
     private String notRegisteredMessage;
 
@@ -71,7 +74,11 @@ public class MainActivity extends RoboActionBarActivity implements OnRegister {
         }
 
         if (id == R.id.action_register) {
-            gcm.registerInBackground(this);
+            try {
+                gcm.registerInBackground(this);
+            } catch (GcmService.MissingGoogleProjectNumberException e) {
+                Util.toast(getApplicationContext(), missingGoogleProjectNumber);
+            }
         }
 
         return super.onOptionsItemSelected(item);

@@ -32,7 +32,6 @@ public class GcmService {
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
     private static final String PROPERTY_REG_ID = "registration_id";
     private static final String PROPERTY_APP_VERSION = "appVersion";
-    private static final String GOOGLE_PROJECT_NUMBER = "718602014193";
     private Context context;
 
     @Inject
@@ -87,7 +86,11 @@ public class GcmService {
         return registrationId;
     }
 
-    void registerInBackground(final OnRegister onRegister) {
+    void registerInBackground(final OnRegister onRegister) throws MissingGoogleProjectNumberException {
+        if (getGoogleProjectNumber().isEmpty()) {
+            throw new MissingGoogleProjectNumberException();
+        }
+
         if (!getRegistrationId().isEmpty()) {
             sendRegistrationIdToBackend(onRegister);
             return;
@@ -98,7 +101,7 @@ public class GcmService {
             protected String doInBackground(Void... params) {
                 String msg;
                 try {
-                    regId = gcm.register(GOOGLE_PROJECT_NUMBER);
+                    regId = gcm.register(getGoogleProjectNumber());
                     msg = "Device registered with gcm, registration ID=" + regId;
                     Ln.i(msg);
                     sendRegistrationIdToBackend(onRegister);
@@ -192,7 +195,15 @@ public class GcmService {
         edit.commit();
     }
 
+    private String getGoogleProjectNumber() {
+        return prefs.getString("google_project_number", "");
+    }
+
     public String getMessageType(Intent intent) {
         return gcm.getMessageType(intent);
+    }
+
+    static class MissingGoogleProjectNumberException extends Exception {
+
     }
 }

@@ -118,19 +118,8 @@ public class SettingsActivity extends RoboPreferenceActivity {
 
             String stringValue = value.toString();
 
-//            if (preference.getKey() == "registration_handle") {
-//
-//                // this involves a network call
-//                if (gcm.registerHandle(stringValue)) {
-//                    preference.setSummary(stringValue);
-//                    return true;
-//                }
-//
-//                return false;
-//            } else {
-                preference.setSummary(stringValue);
-                return true;
-            //}
+            preference.setSummary(stringValue);
+            return true;
         }
     };
 

@@ -18,4 +18,18 @@
         android:selectAllOnFocus="true"
         android:singleLine="true" />
 
+    <EditTextPreference
+        android:key="google_project_number"
+        android:title="@string/pref_title_google_project_number"
+        android:summary="@string/pref_description_google_project_number"
+        android:selectAllOnFocus="true"
+        android:singleLine="true" />
+
+    <!--<EditTextPreference-->
+        <!--android:key="encryption_psk"-->
+        <!--android:title="@string/pref_title_encryption_psk"-->
+        <!--android:summary="@string/pref_description_encryption_psk"-->
+        <!--android:selectAllOnFocus="true"-->
+        <!--android:singleLine="true" />-->
+
 </PreferenceScreen>
