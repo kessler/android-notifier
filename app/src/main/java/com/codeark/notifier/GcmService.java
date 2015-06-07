@@ -12,16 +12,8 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.inject.Inject;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.util.UUID;
 
 import roboguice.inject.ContextSingleton;
 import roboguice.util.Ln;
@@ -41,30 +33,24 @@ public class GcmService {
     private static final String PROPERTY_REG_ID = "registration_id";
     private static final String PROPERTY_APP_VERSION = "appVersion";
     private static final String GOOGLE_PROJECT_NUMBER = "718602014193";
+    private Context context;
 
     @Inject
     public GcmService(Context context, SharedPreferences prefs, PackageInfo packageInfo) {
 
+        this.context = context;
         this.gcm = GoogleCloudMessaging.getInstance(context);
         this.prefs = prefs;
         this.packageInfo = packageInfo;
+        this.regId = getRegistrationId();
     }
-
-    public void lazyInit(OnInit oi) {
-        regId = getRegistrationId();
-
-        if (regId.isEmpty()) {
-            registerInBackground(oi);
-        }
-    }
-
 
     /**
      * Check the device to make sure it has the Google Play Services APK. If
      * it doesn't, display a dialog that allows users to download the APK from
      * the Google Play Store or enable it in the device's system settings.
      */
-    public boolean checkPlayServices(Activity activity) {
+    boolean checkPlayServices(Activity activity) {
 
         int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(activity);
         if (resultCode != ConnectionResult.SUCCESS) {
@@ -80,7 +66,7 @@ public class GcmService {
         return true;
     }
 
-    private String getRegistrationId() {
+    String getRegistrationId() {
         String registrationId = prefs.getString(PROPERTY_REG_ID, "");
 
         if (registrationId.isEmpty()) {
@@ -101,7 +87,12 @@ public class GcmService {
         return registrationId;
     }
 
-    public void registerInBackground(final OnInit onInit) {
+    void registerInBackground(final OnRegister onRegister) {
+        if (!getRegistrationId().isEmpty()) {
+            sendRegistrationIdToBackend(onRegister);
+            return;
+        }
+
         new AsyncTask<Void, Integer, String>() {
             @Override
             protected String doInBackground(Void... params) {
@@ -110,7 +101,7 @@ public class GcmService {
                     regId = gcm.register(GOOGLE_PROJECT_NUMBER);
                     msg = "Device registered with gcm, registration ID=" + regId;
                     Ln.i(msg);
-                    sendRegistrationIdToBackend();
+                    sendRegistrationIdToBackend(onRegister);
                 } catch (IOException ex) {
                     msg = "Error :" + ex.getMessage();
                     // If there is an error, don't just keep trying to register.
@@ -122,93 +113,83 @@ public class GcmService {
 
             @Override
             protected void onPostExecute(String msg) {
-                onInit.execute(msg);
+                onRegister.dispatch(msg);
             }
         }.execute(null, null, null);
     }
 
-    private void storeRegistrationId() {
+    private void setRegistrationId() {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(PROPERTY_REG_ID, regId);
         editor.putInt(PROPERTY_APP_VERSION, packageInfo.versionCode);
         editor.commit();
     }
 
+    private void sendRegistrationIdToBackend(final OnRegister onRegister) {
+        new AsyncTask<Void, Integer, String>() {
 
-    private void sendRegistrationIdToBackend() {
-        if (send("http://192.168.5.175:8080/api/0.0.1/push_reg?id=" + regId)) {
-            storeRegistrationId();
-        }
+            @Override
+            protected String doInBackground(Void... params) {
+                try {
+                    String url = getServerUrl() +
+                            "api/register?handle=" + Util.encodeURIComponent(getHandle()) +
+                            "&regid=" + Util.encodeURIComponent(regId) +
+                            "&key=" + Util.encodeURIComponent(getHandleKey());
+
+                    Ln.i("sending registration request to " + url);
+                    String response = Util.httpGet(url);
+                    Ln.d(response);
+                    setHandleKey(response);
+                    setRegistrationId();
+                    return "registration complete";
+                } catch (IOException e) {
+                    Ln.e(e);
+                    return "registration failed, due to an error " + e;
+                } catch (Util.BadResponseCodeException e) {
+                    return "registration failed, bad status code " + e.getCode();
+                }
+            }
+
+            @Override
+            protected void onPostExecute(String msg) {
+                onRegister.dispatch(msg);
+            }
+
+        }.execute();
     }
 
-    private static boolean send(String url) {
+    private String getServerUrl() {
+        String serverUrl = prefs.getString("notification_server", "http://localhost:3000");
 
-        HttpClient httpclient = new DefaultHttpClient();
-
-        // Prepare a request object
-        HttpGet httpget = new HttpGet(url);
-
-        // Execute the request
-        HttpResponse response;
-        try {
-            response = httpclient.execute(httpget);
-            // Examine the response status
-
-            if (response.getStatusLine().getStatusCode() != 200) {
-                Ln.e("send failed " + response.getStatusLine().toString());
-                return false;
-            }
-
-            // Get hold of the response entity
-            HttpEntity entity = response.getEntity();
-            // If the response does not enclose an entity, there is no need
-            // to worry about connection release
-
-            if (entity != null) {
-
-                // A Simple JSON Response Read
-                InputStream instream = entity.getContent();
-                String result = convertStreamToString(instream);
-                Ln.d(result);
-                // now you have the string representation of the HTML request
-                instream.close();
-                return true;
-            }
-
-
-        } catch (Exception e) {
-            Ln.e(e);
+        if (!serverUrl.endsWith("/")) {
+            serverUrl += "/";
         }
 
-        return false;
+        return serverUrl;
     }
 
-    private static String convertStreamToString(InputStream is) {
-        /*
-         * To convert the InputStream to String we use the BufferedReader.readLine()
-         * method. We iterate until the BufferedReader return null which means
-         * there's no more data to read. Each line will appended to a StringBuilder
-         * and returned as String.
-         */
-        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-        StringBuilder sb = new StringBuilder();
+    private String getHandle() {
+        String defaultHandle = UUID.randomUUID().toString();
+        String handle = prefs.getString("registration_handle", defaultHandle);
 
-        String line;
-        try {
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-                sb.append("\n");
-            }
-        } catch (IOException e) {
-            Ln.e(e);
-        } finally {
-            try {
-                is.close();
-            } catch (IOException e) {
-                Ln.e(e);
-            }
+        // user didn't set this so we set it for him
+        if (defaultHandle.equals(handle)) {
+            final SharedPreferences.Editor edit = prefs.edit();
+            edit.putString("registration_handle", handle);
+            edit.commit();
         }
-        return sb.toString();
+
+        return handle;
+    }
+
+    private String getHandleKey() {
+        return prefs.getString("handle_key", "");
+    }
+
+    private void setHandleKey(String key) {
+        SharedPreferences.Editor edit = prefs.edit();
+        edit.putString("handle_key", key);
+        edit.commit();
     }
 
     public String getMessageType(Intent intent) {

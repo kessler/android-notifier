@@ -16,25 +16,13 @@ import roboguice.util.Ln;
  *
  */
 public class NotifierIntentService extends RoboIntentService {
-
+    @Inject
     private GcmService gcm;
-
+    @Inject
     private NotificationManager notifications;
 
     public NotifierIntentService() {
-        super("ChatifierIntentService");
-    }
-
-    @Inject
-    @SuppressWarnings("unused")
-    public void setGcm(GcmService gcm) {
-        this.gcm = gcm;
-    }
-
-    @Inject
-    @SuppressWarnings("unused")
-    public void setNotifications(NotificationManager notifications) {
-        this.notifications = notifications;
+        super("CodearkIntentService");
     }
 
     @Override

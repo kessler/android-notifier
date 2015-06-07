@@ -1,0 +1,16 @@
+<resources>
+    <string name="title_activity_settings">Settings</string>
+
+    <!-- Strings related to Settings -->
+
+    <!-- Example General settings -->
+    <string name="pref_header_general">General</string>
+
+    <string name="pref_title_notification_server">Notification Server</string>
+    <string name="pref_description_notification_server">URL of the notification server
+    </string>
+
+    <string name="pref_title_registration_handle">Registration Handle</string>
+    <string name="pref_description_registration_handle">A unique registration handle</string>
+
+</resources>

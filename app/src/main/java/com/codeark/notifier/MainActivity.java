@@ -1,10 +1,10 @@
 package com.codeark.notifier;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.inject.Inject;
 
@@ -14,12 +14,17 @@ import roboguice.inject.InjectResource;
 import roboguice.inject.InjectView;
 
 @ContentView(R.layout.activity_main)
-public class MainActivity extends RoboActionBarActivity {
+public class MainActivity extends RoboActionBarActivity implements OnRegister {
 
     private GcmService gcm;
 
+    @InjectResource(R.string.missing_google_play)
     private String missingGooglePlayMessage;
 
+    @InjectResource(R.string.not_registered)
+    private String notRegisteredMessage;
+
+    @InjectView(R.id.console)
     private TextView console;
 
     @Override
@@ -29,17 +34,14 @@ public class MainActivity extends RoboActionBarActivity {
 
         // Check device for Play Services APK.
         if (!gcm.checkPlayServices(this)) {
-            Toast.makeText(getApplicationContext(), missingGooglePlayMessage, Toast.LENGTH_LONG).show();
+            append(missingGooglePlayMessage);
             return;
         }
 
-        gcm.lazyInit(new OnInit() {
-            @Override
-            public void execute(String msg) {
-                console.append(msg + "\n");
-            }
-        });
-
+        if (gcm.getRegistrationId().isEmpty()) {
+            append(notRegisteredMessage);
+            return;
+        }
     }
 
     @Override
@@ -64,7 +66,12 @@ public class MainActivity extends RoboActionBarActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            this.showSettings();
             return true;
+        }
+
+        if (id == R.id.action_register) {
+            gcm.registerInBackground(this);
         }
 
         return super.onOptionsItemSelected(item);
@@ -76,15 +83,17 @@ public class MainActivity extends RoboActionBarActivity {
         this.gcm = gcm;
     }
 
-    @InjectResource(R.string.missing_google_play)
-    @SuppressWarnings("unused")
-    public void setMissingGooglePlayMessage(String message) {
-        this.missingGooglePlayMessage = message;
+    private void showSettings() {
+        Intent i = new Intent(this, SettingsActivity.class);
+        this.startActivity(i);
     }
 
-    @InjectView
-    @SuppressWarnings("unused")
-    public void setConsole(TextView console) {
-        this.console = console;
+    void append(String msg) {
+        console.append(msg + "\n\n");
+    }
+
+    @Override
+    public void dispatch(String msg) {
+        append(msg);
     }
 }
