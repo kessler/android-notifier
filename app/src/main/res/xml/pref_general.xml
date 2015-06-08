@@ -25,6 +25,11 @@
         android:selectAllOnFocus="true"
         android:singleLine="true" />
 
+    <RingtonePreference
+        android:title="@string/pref_title_notification_sound"
+        android:key="notification_sound"
+        android:summary="@string/pref_description_notification_sound" />
+
     <!--<EditTextPreference-->
         <!--android:key="encryption_psk"-->
         <!--android:title="@string/pref_title_encryption_psk"-->

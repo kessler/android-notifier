@@ -1,6 +1,5 @@
 package com.codeark.notifier;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Build;
@@ -11,8 +10,6 @@ import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 
 import com.google.inject.Inject;
-
-import java.util.List;
 
 import roboguice.activity.RoboPreferenceActivity;
 
@@ -66,6 +63,7 @@ public class SettingsActivity extends RoboPreferenceActivity {
         bindPreferenceSummaryToValue(findPreference("notification_server"));
         bindPreferenceSummaryToValue(findPreference("registration_handle"));
         bindPreferenceSummaryToValue(findPreference("google_project_number"));
+        bindPreferenceSummaryToValue(findPreference("notification_sound"));
     }
 
     /**
@@ -101,13 +99,13 @@ public class SettingsActivity extends RoboPreferenceActivity {
     /**
      * {@inheritDoc}
      */
-    @Override
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
-    public void onBuildHeaders(List<Header> target) {
+//    @Override
+//    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
+//    public void onBuildHeaders(List<Header> target) {
 //        if (!isSimplePreferences(this)) {
 //            loadHeadersFromResource(R.xml.pref_headers, target);
 //        }
-    }
+//    }
 
     /**
      * A preference value change listener that updates the preference's summary

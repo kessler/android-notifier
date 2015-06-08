@@ -3,6 +3,9 @@ package com.codeark.notifier;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 
@@ -18,8 +21,12 @@ import roboguice.util.Ln;
 public class NotifierIntentService extends RoboIntentService {
     @Inject
     private GcmService gcm;
+
     @Inject
     private NotificationManager notifications;
+
+    @Inject
+    private SharedPreferences prefs;
 
     public NotifierIntentService() {
         super("CodearkIntentService");
@@ -32,6 +39,11 @@ public class NotifierIntentService extends RoboIntentService {
         // The getMessageType() intent parameter must be the intent you received
         // in your BroadcastReceiver.
         String messageType = gcm.getMessageType(intent);
+        Ln.i("NotifierIntentService got intent call: " + intent.getAction());
+        if (messageType == null) {
+
+            return;
+        }
 
         if (!extras.isEmpty()) {  // has effect of unparcelling Bundle
             /*
@@ -41,6 +53,7 @@ public class NotifierIntentService extends RoboIntentService {
              * recognize.
              */
             String notificationText = null;
+            String title = "";
 
             switch (messageType) {
                 case GoogleCloudMessaging.MESSAGE_TYPE_SEND_ERROR:
@@ -53,7 +66,8 @@ public class NotifierIntentService extends RoboIntentService {
                     break;
 
                 case GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE:
-                    notificationText = "Received: " + extras.getString("message");
+                    notificationText = extras.getString("message");
+                    title = extras.getString("title");
                     break;
 
                 default:
@@ -62,21 +76,38 @@ public class NotifierIntentService extends RoboIntentService {
             }
 
             if (notificationText != null) {
-                sendNotification(notificationText);
+                sendNotification(notificationText, title);
+
+
+//                if (title.isEmpty()) {
+//                    mainActivity.appendAsync(notificationText);
+//                } else {
+//                    mainActivity.appendAsync(title + ": " + notificationText);
+//                }
             }
         }
         // Release the wake lock provided by the WakefulBroadcastReceiver.
         NotifierBroadcastReceiver.completeWakefulIntent(intent);
     }
 
-    private void sendNotification(String message) {
+    private void sendNotification(String message, String title) {
+        String notificationSoundData = prefs.getString("notification_sound", "");
+
+        Uri notificationSoundUri;
+        if (notificationSoundData.isEmpty()) {
+            notificationSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        } else {
+            notificationSoundUri = Uri.parse(notificationSoundData);
+        }
+
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
                 new Intent(this, MainActivity.class), 0);
 
         NotificationCompat.Builder mBuilder =
                 new NotificationCompat.Builder(this)
+                        .setSound(notificationSoundUri)
                         .setSmallIcon(R.drawable.ic_launcher)
-                        .setContentTitle("GCM Notification")
+                        .setContentTitle(title)
                         .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
                         .setContentText(message);
 

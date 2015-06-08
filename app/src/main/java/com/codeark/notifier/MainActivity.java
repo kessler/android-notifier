@@ -81,6 +81,10 @@ public class MainActivity extends RoboActionBarActivity implements OnRegister {
             }
         }
 
+        if (id == R.id.action_deregister) {
+            gcm.deregisterInBackground(this);
+        }
+
         return super.onOptionsItemSelected(item);
     }
 
@@ -98,6 +102,16 @@ public class MainActivity extends RoboActionBarActivity implements OnRegister {
     void append(String msg) {
         console.append(msg + "\n\n");
     }
+
+    void appendAsync(final String msg) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                append(msg);
+            }
+        });
+    }
+
 
     @Override
     public void dispatch(String msg) {

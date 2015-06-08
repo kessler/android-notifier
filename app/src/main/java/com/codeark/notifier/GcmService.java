@@ -27,7 +27,7 @@ public class GcmService {
     private final GoogleCloudMessaging gcm;
     private final SharedPreferences prefs;
     private final PackageInfo packageInfo;
-    private String regId;
+    private String regId1;
 
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
     private static final String PROPERTY_REG_ID = "registration_id";
@@ -41,7 +41,6 @@ public class GcmService {
         this.gcm = GoogleCloudMessaging.getInstance(context);
         this.prefs = prefs;
         this.packageInfo = packageInfo;
-        this.regId = getRegistrationId();
     }
 
     /**
@@ -91,8 +90,10 @@ public class GcmService {
             throw new MissingGoogleProjectNumberException();
         }
 
-        if (!getRegistrationId().isEmpty()) {
-            sendRegistrationIdToBackend(onRegister);
+        String regId = getRegistrationId();
+
+        if (!regId.isEmpty()) {
+            sendRegistrationIdToBackend(onRegister, regId);
             return;
         }
 
@@ -101,10 +102,19 @@ public class GcmService {
             protected String doInBackground(Void... params) {
                 String msg;
                 try {
-                    regId = gcm.register(getGoogleProjectNumber());
+                    String regId = gcm.register(getGoogleProjectNumber());
+
+                    if (regId == null) {
+                        return "Error: got null reg id from gcm";
+                    }
+
+                    if (regId.isEmpty()) {
+                        return "Error: got empty reg id from gcm";
+                    }
+
                     msg = "Device registered with gcm, registration ID=" + regId;
                     Ln.i(msg);
-                    sendRegistrationIdToBackend(onRegister);
+                    sendRegistrationIdToBackend(onRegister, regId);
                 } catch (IOException ex) {
                     msg = "Error :" + ex.getMessage();
                     // If there is an error, don't just keep trying to register.
@@ -121,14 +131,55 @@ public class GcmService {
         }.execute(null, null, null);
     }
 
-    private void setRegistrationId() {
+    public void deregisterInBackground(final OnRegister onRegister) {
+        new AsyncTask<Void, Integer, String>() {
+
+            @Override
+            protected String doInBackground(Void... params) {
+                String response = "";
+
+                try {
+                    String url = getServerUrl() +
+                            "api/deregister?handle=" + Util.encodeURIComponent(getHandle()) +
+                            "&key=" + Util.encodeURIComponent(getHandleKey());
+
+                    Ln.i("sending deregistration request to " + url);
+                    response = Util.httpGet(url);
+                    Ln.d(response);
+                    setHandleKey("");
+                    setRegistrationId("");
+                    return "deregistration complete";
+                } catch (IOException e) {
+                    Ln.e(e);
+
+                    if (!response.isEmpty())
+                        response += "\n";
+
+                    return response + "deregistration failed, due to an error " + e;
+                } catch (Util.BadResponseCodeException e) {
+                    if (!response.isEmpty())
+                        response += "\n";
+
+                    return response + "deregistration failed, bad status code " + e.getCode();
+                }
+            }
+
+            @Override
+            protected void onPostExecute(String msg) {
+                onRegister.dispatch(msg);
+            }
+
+        }.execute();
+    }
+
+    private void setRegistrationId(String id) {
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(PROPERTY_REG_ID, regId);
+        editor.putString(PROPERTY_REG_ID, id);
         editor.putInt(PROPERTY_APP_VERSION, packageInfo.versionCode);
         editor.commit();
     }
 
-    private void sendRegistrationIdToBackend(final OnRegister onRegister) {
+    private void sendRegistrationIdToBackend(final OnRegister onRegister, final String regId) {
         new AsyncTask<Void, Integer, String>() {
 
             @Override
@@ -143,7 +194,7 @@ public class GcmService {
                     String response = Util.httpGet(url);
                     Ln.d(response);
                     setHandleKey(response);
-                    setRegistrationId();
+                    setRegistrationId(regId);
                     return "registration complete";
                 } catch (IOException e) {
                     Ln.e(e);
