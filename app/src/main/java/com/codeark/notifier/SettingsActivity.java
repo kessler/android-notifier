@@ -65,6 +65,7 @@ public class SettingsActivity extends RoboPreferenceActivity {
 
         bindPreferenceSummaryToValue(findPreference("notification_server"));
         bindPreferenceSummaryToValue(findPreference("registration_handle"));
+        bindPreferenceSummaryToValue(findPreference("google_project_number"));
     }
 
     /**
